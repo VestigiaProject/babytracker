@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from './lib/firebase';
+import { auth, db } from './lib/firebase';
 import { Auth } from './components/Auth';
 import { Status } from './components/Status';
 import { Summary } from './components/Summary';
@@ -8,7 +8,8 @@ import { FeedTracker } from './components/FeedTracker';
 import { SleepTracker } from './components/SleepTracker';
 import { TimelineView } from './components/TimelineView';
 import { ShareAccess } from './components/ShareAccess';
-import { Baby } from 'lucide-react';
+import { Baby, Trash2 } from 'lucide-react';
+import { collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 
 export default function App() {
   const [user, loading] = useAuthState(auth);
@@ -16,6 +17,37 @@ export default function App() {
 
   const handleDataUpdate = () => {
     setRefreshTrigger(prev => prev + 1);
+  };
+
+  const clearAllData = async () => {
+    if (!user || !confirm('Are you sure you want to delete all sleep and feed data? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      // Get all feeds
+      const feedsQuery = query(collection(db, 'feeds'), where('userId', '==', user.uid));
+      const feedsSnapshot = await getDocs(feedsQuery);
+      
+      // Get all sleeps
+      const sleepsQuery = query(collection(db, 'sleep'), where('userId', '==', user.uid));
+      const sleepsSnapshot = await getDocs(sleepsQuery);
+
+      // Delete all feeds
+      const feedDeletions = feedsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      
+      // Delete all sleeps
+      const sleepDeletions = sleepsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+
+      // Wait for all deletions to complete
+      await Promise.all([...feedDeletions, ...sleepDeletions]);
+
+      // Refresh the UI
+      handleDataUpdate();
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      alert('Failed to clear data. Please try again.');
+    }
   };
 
   if (loading) {
@@ -36,7 +68,18 @@ export default function App() {
               <h1 className="text-xl font-semibold text-gray-900">Milk Road</h1>
             </div>
             <div className="flex items-center gap-4">
-              {user && <ShareAccess />}
+              {user && (
+                <>
+                  <button
+                    onClick={clearAllData}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    Clear All Data
+                  </button>
+                  <ShareAccess />
+                </>
+              )}
               <Auth user={user} email={user?.email} />
             </div>
           </div>

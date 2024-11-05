@@ -8,6 +8,7 @@ import { FeedTracker } from './components/FeedTracker';
 import { SleepTracker } from './components/SleepTracker';
 import { TimelineView } from './components/TimelineView';
 import { ShareAccess } from './components/ShareAccess';
+import { Statistics } from './components/Statistics';
 import { Baby, Trash2 } from 'lucide-react';
 import { collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 
@@ -98,6 +99,7 @@ export default function App() {
                 <SleepTracker onSleepChange={handleDataUpdate} />
               </div>
             </div>
+            <Statistics />
           </>
         ) : (
           <div className="text-center py-12">
